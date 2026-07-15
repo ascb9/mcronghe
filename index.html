@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方块深空 VOXEL SKY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════ BOOT / TITLE SCREEN ═══════════════ -->
+<div id="boot-screen">
+  <div class="boot-stars" id="boot-stars"></div>
+  <div class="boot-planet"></div>
+  <div class="boot-center">
+    <div class="boot-glyph">⬢</div>
+    <h1 class="boot-title">方块深空</h1>
+    <div class="boot-subtitle">V O X E L &nbsp; S K Y</div>
+    <div class="boot-divider"></div>
+    <p class="boot-tagline">在无尽的体素宇宙中，修复你的飞船，飞向群星。</p>
+    <button id="btn-start" class="boot-btn">
+      <span class="boot-btn-glow"></span>
+      初 始 化 &nbsp;<small>INITIALIZE</small>
+    </button>
+    <div class="boot-hint">建议使用 Chrome / Edge 全屏体验 · 需要键盘与鼠标</div>
+  </div>
+  <div class="boot-footer">
+    <span>ATLAS-Ø 探索者协议 // 存档节点 : 欧几里得-16</span>
+    <span id="boot-version">v1.0</span>
+  </div>
+</div>
+
+<!-- ═══════════════ LOADING OVERLAY ═══════════════ -->
+<div id="loading-screen" class="hidden">
+  <div class="load-ring"><div class="load-ring-inner"></div></div>
+  <div class="load-text" id="loading-text">正在生成星球地形…</div>
+  <div class="load-bar"><div class="load-bar-fill" id="loading-bar"></div></div>
+</div>
+
+<!-- ═══════════════ GAME CANVAS ═══════════════ -->
+<canvas id="game-canvas"></canvas>
+
+<!-- ═══════════════ HUD ═══════════════ -->
+<div id="hud" class="hidden">
+
+  <!-- crosshair -->
+  <div id="crosshair">
+    <div class="ch-dot"></div>
+    <div class="ch-arc ch-arc-l"></div>
+    <div class="ch-arc ch-arc-r"></div>
+    <svg id="mine-progress" width="64" height="64" viewBox="0 0 64 64">
+      <circle class="mp-bg" cx="32" cy="32" r="26"></circle>
+      <circle class="mp-fill" id="mine-progress-fill" cx="32" cy="32" r="26"></circle>
+    </svg>
+  </div>
+
+  <!-- compass ribbon -->
+  <div id="compass"><div id="compass-strip"></div><div class="compass-needle"></div></div>
+
+  <!-- 左下: 生存状态 (NMS风格) -->
+  <div id="vitals" class="hud-panel">
+    <div class="vital-row" id="vital-hazard">
+      <div class="vital-icon" id="hazard-icon">☀</div>
+      <div class="vital-info">
+        <div class="vital-label"><span id="hazard-name">危险防护</span><span class="vital-en">HAZARD PROTECTION</span></div>
+        <div class="vital-bar seg-bar"><div class="vital-fill hazard-fill" id="hazard-bar"></div><div class="seg-lines"></div></div>
+      </div>
+    </div>
+    <div class="vital-row" id="vital-life">
+      <div class="vital-icon">✚</div>
+      <div class="vital-info">
+        <div class="vital-label"><span>生命维持</span><span class="vital-en">LIFE SUPPORT</span></div>
+        <div class="vital-bar seg-bar"><div class="vital-fill life-fill" id="life-bar"></div><div class="seg-lines"></div></div>
+      </div>
+    </div>
+    <div class="vital-row">
+      <div class="vital-icon">⬡</div>
+      <div class="vital-info">
+        <div class="vital-label"><span>护盾 / 生命值</span><span class="vital-en">SHIELD</span></div>
+        <div class="vital-bar seg-bar"><div class="vital-fill health-fill" id="health-bar"></div><div class="seg-lines"></div></div>
+      </div>
+    </div>
+    <div class="vital-row slim">
+      <div class="vital-icon">▲</div>
+      <div class="vital-info">
+        <div class="vital-bar thin"><div class="vital-fill jetpack-fill" id="jetpack-bar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右下: 采矿工具状态 -->
+  <div id="tool-panel" class="hud-panel">
+    <div class="tool-name">多功能工具 <span class="vital-en">MULTI-TOOL</span></div>
+    <div class="tool-mode" id="tool-mode">◆ 采矿光束</div>
+    <div class="vital-bar thin heat"><div class="vital-fill heat-fill" id="heat-bar"></div></div>
+  </div>
+
+  <!-- 飞船HUD -->
+  <div id="ship-hud" class="hidden">
+    <div class="ship-reticle">
+      <div class="sr-ring"></div><div class="sr-ring sr-ring2"></div>
+      <div class="sr-tick sr-t"></div><div class="sr-tick sr-b"></div><div class="sr-tick sr-l"></div><div class="sr-tick sr-r"></div>
+    </div>
+    <div id="ship-left" class="hud-panel">
+      <div class="ship-stat"><span class="ss-label">速度</span><span class="ss-value" id="ship-speed">0<small> u/s</small></span></div>
+      <div class="ship-stat"><span class="ss-label">高度</span><span class="ss-value" id="ship-alt">--</span></div>
+      <div class="ship-stat"><span class="ss-label">脉冲引擎</span>
+        <div class="vital-bar thin pulse"><div class="vital-fill pulse-fill" id="pulse-bar"></div></div>
+      </div>
+      <div class="ship-stat"><span class="ss-label">起飞燃料</span>
+        <div class="vital-bar thin fuel"><div class="vital-fill fuel-fill" id="fuel-bar"></div></div>
+      </div>
+    </div>
+    <div id="ship-target" class="hidden">
+      <div class="st-name" id="ship-target-name">--</div>
+      <div class="st-dist" id="ship-target-dist">--</div>
+    </div>
+    <div id="ship-throttle"><div id="ship-throttle-fill"></div><span>推力</span></div>
+  </div>
+
+  <!-- 顶部通知 -->
+  <div id="notify-stack"></div>
+
+  <!-- 右侧任务 -->
+  <div id="mission-panel">
+    <div class="mission-head">◢ 任务日志 <span class="vital-en">MISSION</span></div>
+    <div class="mission-title" id="mission-title">苏醒</div>
+    <div class="mission-desc" id="mission-desc">…</div>
+    <div class="mission-progress" id="mission-progress"></div>
+  </div>
+
+  <!-- 互动提示 -->
+  <div id="interact-prompt" class="hidden"><b id="interact-key">E</b><span id="interact-text">进入飞船</span></div>
+
+  <!-- 目标信息 (准星指向) -->
+  <div id="target-info" class="hidden">
+    <div class="ti-name" id="target-name">--</div>
+    <div class="ti-sub" id="target-sub">--</div>
+  </div>
+
+  <!-- 快捷栏 -->
+  <div id="hotbar"></div>
+
+  <!-- 左上: 位置信息 -->
+  <div id="location-tag">
+    <div class="loc-planet" id="loc-planet">--</div>
+    <div class="loc-sub" id="loc-sub">--</div>
+    <div class="loc-units">⬡ <span id="units-count">0</span> <small>单位</small></div>
+  </div>
+
+  <!-- 扫描脉冲 -->
+  <div id="scan-pulse"></div>
+  <!-- 世界空间标记容器 -->
+  <div id="markers"></div>
+
+  <!-- 危险警告 vignette -->
+  <div id="hazard-vignette"></div>
+  <div id="damage-flash"></div>
+
+  <!-- 键位帮助 -->
+  <div id="keys-hint">
+    <span><b>WASD</b> 移动</span><span><b>空格</b> 跳跃/喷气</span><span><b>左键</b> 采集</span><span><b>右键</b> 放置</span><span><b>C</b> 扫描</span><span><b>TAB</b> 背包</span><span><b>E</b> 互动</span><span><b>H</b> 收起帮助</span>
+  </div>
+</div>
+
+<!-- ═══════════════ 背包 / 合成 界面 ═══════════════ -->
+<div id="inventory-screen" class="menu-screen hidden">
+  <div class="menu-window">
+    <div class="menu-tabs">
+      <button class="menu-tab active" data-tab="inv">物品栏 <span class="vital-en">INVENTORY</span></button>
+      <button class="menu-tab" data-tab="craft">合成 <span class="vital-en">CRAFT</span></button>
+      <button class="menu-tab" data-tab="refine">精炼 <span class="vital-en">REFINE</span></button>
+    </div>
+    <div class="menu-body">
+      <div class="menu-page" id="page-inv">
+        <div class="inv-header"><span>外骨骼装甲 · 存储矩阵</span><span id="inv-capacity">0 / 24</span></div>
+        <div id="inv-grid" class="inv-grid"></div>
+        <div class="inv-detail" id="inv-detail"><div class="invd-empty">选择一个物品查看详情</div></div>
+      </div>
+      <div class="menu-page hidden" id="page-craft">
+        <div class="inv-header"><span>纳米合成引擎</span></div>
+        <div id="craft-list" class="craft-list"></div>
+      </div>
+      <div class="menu-page hidden" id="page-refine">
+        <div class="inv-header"><span>物质重构 · 精炼协议</span></div>
+        <div id="refine-list" class="craft-list"></div>
+      </div>
+    </div>
+    <div class="menu-footer"><span><b>TAB / ESC</b> 关闭</span><span><b>点击物品</b> 查看 / 使用</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ 星系图 ═══════════════ -->
+<div id="galaxy-screen" class="menu-screen hidden">
+  <div class="galaxy-window">
+    <div class="galaxy-head">◢ 星系导航 <span class="vital-en">STELLAR CARTOGRAPHY</span> <span class="galaxy-sys" id="galaxy-sysname">--</span></div>
+    <div id="galaxy-map"></div>
+    <div class="galaxy-info" id="galaxy-info">选择一颗星球设定航线</div>
+    <div class="menu-footer"><span><b>M / ESC</b> 关闭</span><span><b>点击星球</b> 设定导航目标</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ 修复界面 ═══════════════ -->
+<div id="repair-screen" class="menu-screen hidden">
+  <div class="menu-window repair-window">
+    <div class="repair-head">◢ 星舰系统诊断 <span class="vital-en">STARSHIP DIAGNOSTICS</span></div>
+    <div class="repair-ship-art" id="repair-ship-art">
+      <div class="rs-scanline"></div>
+    </div>
+    <div id="repair-list"></div>
+    <div class="menu-footer"><span><b>ESC</b> 关闭</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ 过渡动画层 ═══════════════ -->
+<div id="transition-layer" class="hidden">
+  <div id="atmo-heat"></div>
+  <div id="speed-lines"></div>
+  <div id="white-fade"></div>
+  <div id="transition-text" class="hidden">
+    <div class="tt-planet" id="tt-planet">--</div>
+    <div class="tt-sub" id="tt-sub">正在进入大气层</div>
+    <div class="tt-alt" id="tt-alt"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ 星球发现标题卡 ═══════════════ -->
+<div id="discovery-card" class="hidden">
+  <div class="dc-line"></div>
+  <div class="dc-eyebrow" id="dc-eyebrow">行星探测完成</div>
+  <div class="dc-name" id="dc-name">--</div>
+  <div class="dc-stats" id="dc-stats"></div>
+  <div class="dc-line"></div>
+</div>
+
+<!-- ═══════════════ 死亡界面 ═══════════════ -->
+<div id="death-screen" class="hidden">
+  <div class="death-glyph">⬢</div>
+  <div class="death-title">生命信号丢失</div>
+  <div class="death-sub">LIFE SIGNAL LOST — 探索者协议将重建你的躯体</div>
+  <button id="btn-respawn" class="boot-btn">重 生 <small>RESPAWN</small></button>
+</div>
+
+<!-- ═══════════════ 暂停菜单 ═══════════════ -->
+<div id="pause-screen" class="menu-screen hidden">
+  <div class="pause-box">
+    <div class="pause-title">系统挂起</div>
+    <button class="pause-btn" id="btn-resume">继续探索</button>
+    <button class="pause-btn" id="btn-fullscreen">切换全屏</button>
+    <button class="pause-btn danger" id="btn-restart">重新开始</button>
+  </div>
+</div>
+
+<script src="libs/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script src="js/ship.js"></script>
+<script src="js/space.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
